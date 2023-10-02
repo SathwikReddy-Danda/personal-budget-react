@@ -40,22 +40,20 @@ function HomePage() {
 
   function getBudget() {
       axios.get("http://localhost:3100/budget").then(function (res) {
-        console.log(res);
         for (var i = 0; i < res.data.myBudget.length; i++) {
           dataSource.datasets[0].data[i] = res.data.myBudget[i].budget;
           dataSource.labels[i] = res.data.myBudget[i].title;
         }
-        //drawChart(randomData(res.data.myBudget));
         createChart();
-        createD3Chart(res.data.myBudget);
+        createD3(res.data.myBudget);
       }).catch(function (error) {
-        console.error("Error fetching budget data: ", error);
+        console.error("Error while fetching budget data: ", error);
       });
     }  
     
     const svgRef = useRef(null);
 
-    function createD3Chart(data) {
+    function createD3(data) {
       const svg = d3.select(svgRef.current);
 
       const width = 900; 
