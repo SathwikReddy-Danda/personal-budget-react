@@ -166,14 +166,14 @@ function HomePage() {
             </section>
 
             <section>
-                <h1>Chart/Sathwik Reddy</h1>
+                <h1>Chart/Sathwik_Reddy</h1>
                 <p>
                    <canvas id="myChart" width="400" height="400"> </canvas>
                 </p>
             </section>
     
             <section>
-                <h1>D3JS Chart/Sathwik Reddy</h1>
+                <h1>D3JS Chart/Sathwik_Reddy</h1>
                     <div id="D3JS"></div>
             </section>
     
