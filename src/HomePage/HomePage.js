@@ -1,12 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect,useState } from 'react';
 import axios from "axios";
-import { Chart as ChartJS } from "chart.js/auto";
-import * as d3 from "d3";
-import { pie, arc } from "d3-shape";
-
+import Chart from 'chart.js/auto';
+import * as d3 from 'd3'; 
 function HomePage() {
 
-  var dataSource = {
+  const [dataSource] = useState({
     datasets: [
       {
         data: [],
@@ -22,90 +20,114 @@ function HomePage() {
       },
     ],
     labels: [],
-  };
+  });
 
-  function createChart() {
-    var ctx = document.getElementById("Charts").getContext("2d");
-
-    if (window.myPieChart) {
-      window.myPieChart.destroy();
-    }
-
-    window.myPieChart = new ChartJS(ctx, {
-      type: "pie",
-      data: dataSource,
+  const createChart = () => {
+    const ctx = document.getElementById("myChart");
+    const myPieChart = new Chart(ctx, {
+      type: 'pie',
+      data: dataSource
     });
   }
-  
+  const D3JS = () =>{
+    const width = 600,
+                height = 300;
+            const svg = d3.select("#D3JS")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 2},${height / 2})`);
+                const radius = Math.min(width, height) / 2;
 
-  function getBudget() {
-      axios.get("http://localhost:3100/budget").then(function (res) {
+            const color = d3.scaleOrdinal()
+                .domain(dataSource.labels) 
+                .range([
+                  "#ffcd56",
+                  "#ff6384",
+                  "#36a2eb",
+                  "#fd6b19",
+                  "#ff1a1a",
+                  "#00ff00",
+                  "#0000ff"]);
+
+            const pie = d3.pie()
+                .sort(null) 
+                .value(d => d.data);
+
+            const data_ready = pie(dataSource.datasets[0].data.map((data, index) => ({
+                data: data,
+                label: dataSource.labels[index]
+            })));
+
+            const arc = d3.arc()
+                .innerRadius(radius * 0.4) 
+                .outerRadius(radius * 0.8);
+            const outerArc = d3.arc()
+                .innerRadius(radius * 0.9)
+                .outerRadius(radius * 0.9);
+
+            svg
+                .selectAll('allSlices')
+                .data(data_ready)
+                .join('path')
+                .attr('d', arc)
+                .attr('fill', d => color(d.data.label)) 
+                .attr("stroke", "white")
+                .style("stroke-width", "2.5px")
+                .style("opacity", "1px");
+
+            svg
+                .selectAll('allPolylines')
+                .data(data_ready)
+                .join('polyline')
+                .attr("stroke", "black")
+                .style("fill", "none")
+                .attr("stroke-width", 1)
+                .attr('points', function (d) {
+                    const posA = arc.centroid(d); 
+                    const posB = outerArc.centroid(d); 
+                    const posC = outerArc.centroid(d); 
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2; 
+                    posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); 
+                    return [posA, posB, posC];
+                });
+
+            svg
+                .selectAll('allLabels')
+                .data(data_ready)
+                .join('text')
+                .text(d => d.data.label) 
+                .attr('transform', function (d) {
+                    const pos = outerArc.centroid(d);
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                    pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
+                    return `translate(${pos})`;
+                })
+                .style('text-anchor', function (d) {
+                    const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+                    return (midangle < Math.PI ? 'start' : 'end');
+                });
+  }
+
+  const getBudget = () => {
+    axios.get('http://localhost:3100/budget')
+      .then(function (res) {
         for (var i = 0; i < res.data.myBudget.length; i++) {
           dataSource.datasets[0].data[i] = res.data.myBudget[i].budget;
           dataSource.labels[i] = res.data.myBudget[i].title;
-        }
-        createChart();
-        createD3(res.data.myBudget);
-      }).catch(function (error) {
-        console.error("Error while fetching budget data: ", error);
+      }
+      createChart();
+      D3JS();
+      })
+      .catch(function (error) {
+        console.error('Error while fetching budget data:', error);
       });
-    }  
-    
-    const svgRef = useRef(null);
+  }
 
-    function createD3(data) {
-      const svg = d3.select(svgRef.current);
-
-      const width = 900; 
-      const height = 900;
-      const radius = Math.min(width, height) / 2;
-
-      svg.attr("width", width).attr("height", height);
-
-      const centerX = width / 2;
-      const centerY = height / 2;
-
-      const g = svg.append("g").attr("transform", `translate(${centerX},${centerY})`);
-    
-      const color = d3
-        .scaleOrdinal()
-        .domain(data.map((d) => d.title))
-        .range([
-          "#ffcd56",
-          "#ff6384",
-          "#36a2eb",
-          "#fd6b19",
-          "#ff1a1a",
-          "#00ff00",
-          "#0000ff",
-        ]);
-
-    
-      const pieGenerator = pie().value((d) => d.budget);
-    
-      const pathGenerator = arc()
-        .outerRadius(radius * 0.6)
-        .innerRadius(radius * 0.3);
-    
-      const arcs = pieGenerator(data);
-    
-      const arcPaths = g
-        .selectAll("path")
-        .data(arcs)
-        .enter()
-        .append("path")
-        .attr("d", pathGenerator)
-        .attr("fill", (d) => color(d.data.title))
-        .attr("stroke", "white")
-        .style("stroke-width", "2px");
-    
-      g.attr("transform", `translate(${width / 2},${height / 2})`);
-    }
-
-    useEffect(() => {
-      console.log("useEffect is running!");
-      getBudget();
-    }, []);
+  useEffect(() => {
+    getBudget();
+  }, []);
   
 
   return (
@@ -142,18 +164,19 @@ function HomePage() {
                     This app is free!!! And you are the only one holding your data!
                 </p>
             </section>
-    
-            <section>
-                <h2>Chart/Sathwik Reddy</h2>
-                <p>
-                    <canvas id="Charts" width="300" height="300" aria-label="Budget Chart"></canvas>
-                </p>
-            </section>
 
             <section>
-              <h2>D3Charts/Sathwik Reddy</h2>
-              <svg ref={svgRef} width={800} height={900}></svg>
+                <h1>Chart/Sathwik Reddy</h1>
+                <p>
+                   <canvas id="myChart" width="400" height="400"> </canvas>
+                </p>
             </section>
+    
+            <section>
+                <h1>D3JS Chart/Sathwik Reddy</h1>
+                    <div id="D3JS"></div>
+            </section>
+    
         </div>
     </main>
   );
